@@ -4,11 +4,11 @@ public class VideoSettings {
 	private String	format;
 	private double	frameRate;
 	private long	timestamp;
-	private int		frameNumber;
-	private int		imageWidth;
-	private int		ImageHeight;
-	private int		sampleFormat;
-	private int		sampleRate;
+	private int	frameNumber;
+	private int	imageWidth;
+	private int	ImageHeight;
+	private int	sampleFormat;
+	private int	sampleRate;
 
 	public String getFormat() {
 		return format;
