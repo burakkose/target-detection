@@ -1,9 +1,17 @@
 package com.senior.processing;
 
-import static com.googlecode.javacv.cpp.opencv_core.cvEllipse;
-import static com.googlecode.javacv.cpp.opencv_core.cvPoint;
-import static com.googlecode.javacv.cpp.opencv_core.cvSize;
-import static com.googlecode.javacv.cpp.opencv_highgui.cvSaveImage;
+import static org.bytedeco.javacpp.opencv_core.CV_TERMCRIT_ITER;
+import static org.bytedeco.javacpp.opencv_core.cvAnd;
+import static org.bytedeco.javacpp.opencv_core.cvCloneImage;
+import static org.bytedeco.javacpp.opencv_core.cvGetSize;
+import static org.bytedeco.javacpp.opencv_core.cvPoint;
+import static org.bytedeco.javacpp.opencv_core.cvRectangle;
+import static org.bytedeco.javacpp.opencv_highgui.cvSaveImage;
+import static org.bytedeco.javacpp.opencv_imgproc.CV_BGR2HSV;
+import static org.bytedeco.javacpp.opencv_imgproc.CV_THRESH_BINARY;
+import static org.bytedeco.javacpp.opencv_imgproc.cvCvtColor;
+import static org.bytedeco.javacpp.opencv_imgproc.cvThreshold;
+import static org.bytedeco.javacpp.opencv_video.cvMeanShift;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -11,114 +19,46 @@ import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.Scanner;
 
-import com.googlecode.javacv.FFmpegFrameGrabber;
-import com.googlecode.javacv.FFmpegFrameRecorder;
-import com.googlecode.javacv.FrameGrabber;
-import com.googlecode.javacv.FrameGrabber.Exception;
-import com.googlecode.javacv.cpp.opencv_core.CvScalar;
-import com.googlecode.javacv.cpp.opencv_core.IplImage;
-
-class VideoSettings {
-	private String	format;
-	private int		frameNumber;
-	private int		imageWidth;
-	private int		ImageHeight;
-	private int		sampleFormat;
-	private int		sampleRate;
-	private long	timestamp;
-	private double	frameRate;
-
-	public String getFormat() {
-		return format;
-	}
-
-	public void setFormat(String format) {
-		this.format = format;
-	}
-
-	public int getFrameNumber() {
-		return frameNumber;
-	}
-
-	public void setFrameNumber(int frameNumber) {
-		this.frameNumber = frameNumber;
-	}
-
-	public int getSampleFormat() {
-		return sampleFormat;
-	}
-
-	public void setSampleFormat(int sampleFormat) {
-		this.sampleFormat = sampleFormat;
-	}
-
-	public int getSampleRate() {
-		return sampleRate;
-	}
-
-	public void setSampleRate(int sampleRate) {
-		this.sampleRate = sampleRate;
-	}
-
-	public double getFrameRate() {
-		return frameRate;
-	}
-
-	public void setFrameRate(double frameRate) {
-		this.frameRate = frameRate;
-	}
-
-	public long getTimestamp() {
-		return timestamp;
-	}
-
-	public void setTimestamp(long timestamp) {
-		this.timestamp = timestamp;
-	}
-
-	public int getImageHeight() {
-		return ImageHeight;
-	}
-
-	public void setImageHeight(int imageHeight) {
-		ImageHeight = imageHeight;
-	}
-
-	public int getImageWidth() {
-		return imageWidth;
-	}
-
-	public void setImageWidth(int imageWidth) {
-		this.imageWidth = imageWidth;
-	}
-}
+import org.bytedeco.javacpp.opencv_core.CvHistogram;
+import org.bytedeco.javacpp.opencv_core.CvRect;
+import org.bytedeco.javacpp.opencv_core.CvTermCriteria;
+import org.bytedeco.javacpp.opencv_core.IplImage;
+import org.bytedeco.javacpp.opencv_core.IplROI;
+import org.bytedeco.javacpp.opencv_imgproc.CvConnectedComp;
+import org.bytedeco.javacpp.helper.opencv_core.AbstractCvScalar;
+import org.bytedeco.javacpp.helper.opencv_core.AbstractIplImage;
+import org.bytedeco.javacv.FFmpegFrameGrabber;
+import org.bytedeco.javacv.FFmpegFrameRecorder;
+import org.bytedeco.javacv.FrameGrabber;
 
 public class Processing {
-	public static void main(String[] args) {
-		Processing p = new Processing("/home/senior/Desktop/Yazlab/Jogging.AVI");
-		p.getFirstFrames();
+	public static void main(final String[] args) {
+		final Processing p = new Processing(
+				"/home/senior/Desktop/Yazlab/Jogging.AVI");
+		p.separateFrames();
 		p.framesProcessing();
-		p.createNewVideo();
+		// p.createNewVideo();
 		System.out.println("bitti");
 	}
 
 	private final String					videoLocation;
-	private LinkedList<IplImage>			oldFrames;
+	private ArrayList<IplImage>				oldFrames;
 	private LinkedList<IplImage>			newFrames;
-	private ArrayList<ArrayList<Integer>>	sourceFile;
 	private VideoSettings					settings;
+	private LinkedList<ArrayList<Integer>>	sourceFile;
 
-	public Processing(String location) {
+	public Processing(final String location) {
 		videoLocation = location;
 		readSourceFile("/home/senior/Desktop/Yazlab/manual_Jogging1.txt");
 	}
 
-	public void getFirstFrames() {
+	public void separateFrames() {
 
-		FrameGrabber videoGrabber = new FFmpegFrameGrabber(videoLocation);
+		final FrameGrabber videoGrabber = new FFmpegFrameGrabber(videoLocation);
 
 		videoGrabber.setFormat("avi");
 
+		// Set settings for create new video from processing frames
 		settings = new VideoSettings();
 
 		settings.setFormat(videoGrabber.getFormat());
@@ -130,48 +70,114 @@ public class Processing {
 		settings.setFrameNumber(videoGrabber.getFrameNumber());
 		settings.setSampleFormat(videoGrabber.getSampleFormat());
 
-		oldFrames = new LinkedList<IplImage>();
+		oldFrames = new ArrayList<IplImage>();
 
 		try {
 			videoGrabber.start();
-		} catch (Exception e1) {
+
+			IplImage vFrameImage = null;
+			int countImages = 1;
+
+			do {
+				try {
+					vFrameImage = videoGrabber.grab();
+					if (vFrameImage != null) { // add ArrayList and save to file
+						oldFrames.add(vFrameImage.clone());
+						saveFrames("frame_" + countImages + ".jpg", vFrameImage);
+						++countImages;
+					}
+				} catch (final Exception e) {
+					e.printStackTrace();
+				}
+			} while (vFrameImage != null);
+
+		} catch (final Exception e1) {
 			e1.printStackTrace();
 		}
 
-		IplImage vFrameImage = null;
-		int countImages = 1;
-
-		do {
-			try {
-				vFrameImage = videoGrabber.grab();
-				if (vFrameImage != null) {
-					oldFrames.add(vFrameImage.clone());
-					saveFrames("frame_" + countImages + ".jpg", vFrameImage);
-					++countImages;
-				}
-			} catch (com.googlecode.javacv.FrameGrabber.Exception e) {
-				e.printStackTrace();
-			}
-		} while (vFrameImage != null);
 	}
 
 	public void framesProcessing() {
 		try {
-			newFrames = new LinkedList<IplImage>();
-			int count = 0;
-			for (IplImage image : oldFrames) {
-				cvEllipse(
-						image,
-						cvPoint(sourceFile.get(count).get(1),
-								sourceFile.get(count).get(2)),
-						cvSize(sourceFile.get(count).get(3),
-								sourceFile.get(count).get(4)), 0, 0, 360,
-						CvScalar.GREEN, 1, 8, 0);
-				newFrames.add(image.clone());
-				saveFrames("newframe_" + count + ".jpg", image);
+
+			int count = 1;
+			final int minSaturation = 65;
+
+			newFrames = new LinkedList<IplImage>(); // list for processing
+													// frames
+
+			CvRect targetRect = new CvRect();
+
+			IplImage result = null;
+			IplImage hsvTargetImage = null;
+			IplImage saturationChannel = null;
+
+			CvHistogram templateHueHist = null; // Color histogram
+
+			CvTermCriteria termCriteria = null;
+			CvConnectedComp searchResults = null;
+
+			for (IplImage targetImage : oldFrames) {
+
+				if (count % 3 == 1) { // update per 3 frame
+					templateHueHist = updateHistogram(targetRect, count - 1);
+				}
+
+				hsvTargetImage = AbstractIplImage.create(
+						cvGetSize(targetImage), targetImage.depth(), 3);
+				cvCvtColor(targetImage, hsvTargetImage, CV_BGR2HSV);
+
+				// Identify pixels with low saturation
+				saturationChannel = ColorHistoram.splitChannels(hsvTargetImage)[1];
+				cvThreshold(saturationChannel, saturationChannel,
+						minSaturation, 255, CV_THRESH_BINARY);
+
+				// back-projection
+				ContentFinder.histogram = templateHueHist;
+				result = ContentFinder.find(hsvTargetImage);
+
+				// Eliminate low saturation pixels
+				cvAnd(result, saturationChannel, result, null);
+
+				// Search termination criteria
+				termCriteria = new CvTermCriteria();
+				termCriteria.max_iter(10);
+				termCriteria.epsilon(0.01);
+				termCriteria.type(CV_TERMCRIT_ITER);
+
+				// Search using mean shift algorithm.
+				searchResults = new CvConnectedComp();
+				cvMeanShift(result, targetRect, termCriteria, searchResults);
+
+				// Draw green rectangle
+				int g_x = searchResults.rect().x();
+				int g_y = searchResults.rect().y();
+				int g_width = searchResults.rect().width();
+				int g_height = searchResults.rect().height();
+				cvRectangle(targetImage,
+						cvPoint(g_x - g_width, g_y - g_height),
+						cvPoint(g_x + g_width, g_y + g_height),
+						AbstractCvScalar.GREEN, 1, 8, 0);
+
+				// Draw red rectangle
+				ArrayList<Integer> array = sourceFile.get(count - 1);
+				int r_x = array.get(1);
+				int r_y = array.get(2);
+				int r_width = array.get(3);
+				int r_height = array.get(4);
+				cvRectangle(targetImage,
+						cvPoint(r_x - r_width, r_y - r_height),
+						cvPoint(r_x + r_width, r_y + r_height),
+						AbstractCvScalar.RED, 1, 8, 0);
+
+				// save new frame
+				newFrames.add(targetImage.clone());
+				saveFrames("newframe_" + count + ".jpg", targetImage);
+				System.gc();
 				++count;
 			}
-		} catch (java.lang.Exception e) {
+
+		} catch (final java.lang.Exception e) {
 			e.printStackTrace();
 		}
 
@@ -190,29 +196,57 @@ public class Processing {
 
 		try {
 			recorder.start();
-			for (IplImage image : newFrames) {
+			for (final IplImage image : newFrames) {
 				try {
 					recorder.record(image);
-				} catch (com.googlecode.javacv.FrameRecorder.Exception e) {
-					// TODO Auto-generated catch block
+				} catch (final org.bytedeco.javacv.FrameRecorder.Exception e) {
 					e.printStackTrace();
 				}
 			}
 			recorder.stop();
 			recorder.release();
-		} catch (com.googlecode.javacv.FrameRecorder.Exception e1) {
-			// TODO Auto-generated catch block
+		} catch (final org.bytedeco.javacv.FrameRecorder.Exception e1) {
 			e1.printStackTrace();
 		}
 
 	}
 
-	private void saveFrames(String frameName, IplImage image) {
+	private CvHistogram updateHistogram(CvRect targetRect, int index) {
+
+		IplImage templateImage = cvCloneImage(oldFrames.get(index));
+		ArrayList<Integer> array = sourceFile.get(index);
+
+		final int x = array.get(1);
+		final int y = array.get(2);
+		final int width = array.get(3);
+		final int height = array.get(4);
+
+		targetRect.x(x);
+		targetRect.y(y);
+		targetRect.width(width);
+		targetRect.height(height);
+
+		IplROI roi = new IplROI();
+
+		roi.xOffset(x);
+		roi.yOffset(y);
+		roi.height(height);
+		roi.width(width);
+
+		templateImage.roi(roi);
+
+		final int minSaturation = 65;
+
+		return ColorHistoram.getHueHistogram(templateImage, minSaturation);
+
+	}
+
+	private void saveFrames(final String frameName, final IplImage image) {
 		cvSaveImage(frameName, image);
 	}
 
-	private void readSourceFile(String fileLocation) {
-		sourceFile = new ArrayList<ArrayList<Integer>>();
+	private void readSourceFile(final String fileLocation) {
+		sourceFile = new LinkedList<ArrayList<Integer>>();
 
 		Scanner input = null;
 		Scanner colReader = null;
@@ -222,7 +256,7 @@ public class Processing {
 
 			while (input.hasNextLine()) {
 				colReader = new Scanner(input.nextLine());
-				ArrayList<Integer> col = new ArrayList<Integer>();
+				final ArrayList<Integer> col = new ArrayList<Integer>();
 
 				while (colReader.hasNextInt()) {
 					col.add(colReader.nextInt());
@@ -230,7 +264,7 @@ public class Processing {
 
 				sourceFile.add(col);
 			}
-		} catch (FileNotFoundException e) {
+		} catch (final FileNotFoundException e) {
 			e.printStackTrace();
 		} finally {
 			colReader.close();
