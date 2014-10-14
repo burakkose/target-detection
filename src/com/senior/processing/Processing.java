@@ -41,11 +41,11 @@ public class Processing {
 		System.out.println("bitti");
 	}
 
-	private final String					videoLocation;
-	private ArrayList<IplImage>				oldFrames;
-	private LinkedList<IplImage>			newFrames;
-	private VideoSettings					settings;
-	private LinkedList<ArrayList<Integer>>	sourceFile;
+	private final String				videoLocation;
+	private ArrayList  <IplImage>			oldFrames;
+	private LinkedList <IplImage>			newFrames;
+	private VideoSettings				settings;
+	private LinkedList <ArrayList <Integer> >	sourceFile;
 
 	public Processing(final String location) {
 		videoLocation = location;
@@ -103,8 +103,7 @@ public class Processing {
 			int count = 1;
 			final int minSaturation = 65;
 
-			newFrames = new LinkedList<IplImage>(); // list for processing
-													// frames
+			newFrames = new LinkedList<IplImage>(); // list for processing frames
 
 			CvRect targetRect = new CvRect();
 
