@@ -14,7 +14,7 @@ import org.bytedeco.javacpp.helper.opencv_core.AbstractIplImage;
 public class ContentFinder {
 	public static CvHistogram	histogram	= null;
 
-	public static IplImage find(final IplImage image) {
+	public static IplImage find(IplImage image) {
 
 		// `cvCalcBackProject` must be single channel.
 		// Convert each channel image to a to 32 bit floating point image.
@@ -28,7 +28,7 @@ public class ContentFinder {
 		return toIplImage8U(dest);
 	}
 
-	public static IplImage[] toIplImage32F(final IplImage[] srcArr) {
+	public static IplImage[] toIplImage32F(IplImage[] srcArr) {
 
 		IplImage[] arr = new IplImage[srcArr.length];
 
@@ -47,7 +47,7 @@ public class ContentFinder {
 
 	}
 
-	public static IplImage toIplImage8U(final IplImage src) {
+	public static IplImage toIplImage8U(IplImage src) {
 
 		double[] min = { Double.MAX_VALUE
 		};

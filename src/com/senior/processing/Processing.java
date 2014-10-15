@@ -15,6 +15,7 @@ import static org.bytedeco.javacpp.opencv_video.cvMeanShift;
 
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.Scanner;
@@ -37,15 +38,15 @@ public class Processing {
 				"/home/senior/Desktop/Yazlab/Jogging.AVI");
 		p.separateFrames();
 		p.framesProcessing();
-		// p.createNewVideo();
-		System.out.println("bitti");
+		p.createNewVideo();
+		System.out.println("finish");
 	}
 
-	private final String				videoLocation;
-	private ArrayList  <IplImage>			oldFrames;
-	private LinkedList <IplImage>			newFrames;
-	private VideoSettings				settings;
-	private LinkedList <ArrayList <Integer> >	sourceFile;
+	private final String					videoLocation;
+	private ArrayList<IplImage>				oldFrames;
+	private LinkedList<IplImage>			newFrames;
+	private VideoSettings					settings;
+	private LinkedList<ArrayList<Integer>>	sourceFile;
 
 	public Processing(final String location) {
 		videoLocation = location;
@@ -58,37 +59,40 @@ public class Processing {
 
 		videoGrabber.setFormat("avi");
 
-		// Set settings for create new video from processing frames
 		settings = new VideoSettings();
-
-		settings.setFormat(videoGrabber.getFormat());
-		settings.setTimestamp(videoGrabber.getTimestamp());
-		settings.setFrameRate(videoGrabber.getFrameRate());
-		settings.setSampleRate(videoGrabber.getSampleRate());
-		settings.setImageWidth(videoGrabber.getImageWidth());
-		settings.setImageHeight(videoGrabber.getImageHeight());
-		settings.setFrameNumber(videoGrabber.getFrameNumber());
-		settings.setSampleFormat(videoGrabber.getSampleFormat());
-
 		oldFrames = new ArrayList<IplImage>();
 
 		try {
 			videoGrabber.start();
 
+			// Set settings for create new video from processing frames
+			settings.setFormat(videoGrabber.getFormat());
+			settings.setTimestamp(videoGrabber.getTimestamp());
+			settings.setFrameRate(videoGrabber.getFrameRate());
+			settings.setSampleRate(videoGrabber.getSampleRate());
+			settings.setImageWidth(videoGrabber.getImageWidth());
+			settings.setImageHeight(videoGrabber.getImageHeight());
+			settings.setFrameNumber(videoGrabber.getFrameNumber());
+			settings.setSampleFormat(videoGrabber.getSampleFormat());
+
 			IplImage vFrameImage = null;
+
 			int countImages = 1;
+			new File("frames").mkdir(); // create folder
 
 			do {
 				try {
 					vFrameImage = videoGrabber.grab();
 					if (vFrameImage != null) { // add ArrayList and save to file
 						oldFrames.add(vFrameImage.clone());
-						saveFrames("frame_" + countImages + ".jpg", vFrameImage);
+						saveFrames("frames/frame_" + countImages + ".jpg",
+								vFrameImage);
 						++countImages;
 					}
 				} catch (final Exception e) {
 					e.printStackTrace();
 				}
+
 			} while (vFrameImage != null);
 
 		} catch (final Exception e1) {
@@ -101,10 +105,13 @@ public class Processing {
 		try {
 
 			int count = 1;
+			double total = 0;
 			final int minSaturation = 65;
 
-			newFrames = new LinkedList<IplImage>(); // list for processing frames
+			new File("newframes").mkdir();
 
+			newFrames = new LinkedList<IplImage>(); // list for processing
+													// frames
 			CvRect targetRect = new CvRect();
 
 			IplImage result = null;
@@ -112,15 +119,25 @@ public class Processing {
 			IplImage saturationChannel = null;
 
 			CvHistogram templateHueHist = null; // Color histogram
+			CvTermCriteria termCriteria = null; // term criteria
 
-			CvTermCriteria termCriteria = null;
-			CvConnectedComp searchResults = null;
+			CvConnectedComp searchResults = new CvConnectedComp(); // fo
+																	// meanshift
+																	// algorithm
+
+			templateHueHist = updateHistogram(targetRect, 0); // first frame
+																// target
+																// position
+
+			// Search termination criteria
+			termCriteria = new CvTermCriteria();
+			termCriteria.max_iter(10);
+			termCriteria.epsilon(0.01);
+			termCriteria.type(CV_TERMCRIT_ITER);
+
+			PrintWriter writer = new PrintWriter("Euclidean.txt", "UTF-8");
 
 			for (IplImage targetImage : oldFrames) {
-
-				if (count % 3 == 1) { // update per 3 frame
-					templateHueHist = updateHistogram(targetRect, count - 1);
-				}
 
 				hsvTargetImage = AbstractIplImage.create(
 						cvGetSize(targetImage), targetImage.depth(), 3);
@@ -138,21 +155,14 @@ public class Processing {
 				// Eliminate low saturation pixels
 				cvAnd(result, saturationChannel, result, null);
 
-				// Search termination criteria
-				termCriteria = new CvTermCriteria();
-				termCriteria.max_iter(10);
-				termCriteria.epsilon(0.01);
-				termCriteria.type(CV_TERMCRIT_ITER);
-
-				// Search using mean shift algorithm.
-				searchResults = new CvConnectedComp();
 				cvMeanShift(result, targetRect, termCriteria, searchResults);
+				targetRect = searchResults.rect();
 
 				// Draw green rectangle
-				int g_x = searchResults.rect().x();
-				int g_y = searchResults.rect().y();
-				int g_width = searchResults.rect().width();
-				int g_height = searchResults.rect().height();
+				int g_x = targetRect.x();
+				int g_y = targetRect.y();
+				int g_width = targetRect.width();
+				int g_height = targetRect.height();
 				cvRectangle(targetImage,
 						cvPoint(g_x - g_width, g_y - g_height),
 						cvPoint(g_x + g_width, g_y + g_height),
@@ -171,11 +181,19 @@ public class Processing {
 
 				// save new frame
 				newFrames.add(targetImage.clone());
-				saveFrames("newframe_" + count + ".jpg", targetImage);
+				saveFrames("newframes/newframe_" + count + ".jpg", targetImage);
+
+				double cost = Math.sqrt(Math.pow(r_x - g_x, 2)
+						+ Math.pow(r_y - g_y, 2)); // for success score
+				total += cost; // total score
+
+				writer.println(cost); // current frame cost
+
 				System.gc();
 				++count;
 			}
-
+			writer.println(total); // total score
+			writer.close();
 		} catch (final java.lang.Exception e) {
 			e.printStackTrace();
 		}
@@ -195,7 +213,7 @@ public class Processing {
 
 		try {
 			recorder.start();
-			for (final IplImage image : newFrames) {
+			for (IplImage image : newFrames) {
 				try {
 					recorder.record(image);
 				} catch (final org.bytedeco.javacv.FrameRecorder.Exception e) {
@@ -217,8 +235,8 @@ public class Processing {
 
 		final int x = array.get(1);
 		final int y = array.get(2);
-		final int width = array.get(3);
-		final int height = array.get(4);
+		final int width = array.get(3) + 3;
+		final int height = array.get(4) + 17;
 
 		targetRect.x(x);
 		targetRect.y(y);
