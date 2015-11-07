@@ -1,76 +1,77 @@
-package com.senior.processing;
+package com.senior.processing.utils;
 
 public class VideoSettings {
-	private String	format;
-	private double	frameRate;
-	private long	timestamp;
-	private int	frameNumber;
-	private int	imageWidth;
-	private int	ImageHeight;
-	private int	sampleFormat;
-	private int	sampleRate;
 
-	public String getFormat() {
-		return format;
-	}
+    private String format;
+    private int frameNumber;
+    private int imageWidth;
+    private int ImageHeight;
+    private int sampleFormat;
+    private int sampleRate;
+    private long timestamp;
+    private double frameRate;
 
-	public void setFormat(final String format) {
-		this.format = format;
-	}
+    public String getFormat() {
+        return format;
+    }
 
-	public int getFrameNumber() {
-		return frameNumber;
-	}
+    public void setFormat(final String format) {
+        this.format = format;
+    }
 
-	public void setFrameNumber(final int frameNumber) {
-		this.frameNumber = frameNumber;
-	}
+    public int getFrameNumber() {
+        return frameNumber;
+    }
 
-	public int getSampleFormat() {
-		return sampleFormat;
-	}
+    public void setFrameNumber(final int frameNumber) {
+        this.frameNumber = frameNumber;
+    }
 
-	public void setSampleFormat(final int sampleFormat) {
-		this.sampleFormat = sampleFormat;
-	}
+    public int getSampleFormat() {
+        return sampleFormat;
+    }
 
-	public int getSampleRate() {
-		return sampleRate;
-	}
+    public void setSampleFormat(final int sampleFormat) {
+        this.sampleFormat = sampleFormat;
+    }
 
-	public void setSampleRate(final int sampleRate) {
-		this.sampleRate = sampleRate;
-	}
+    public int getSampleRate() {
+        return sampleRate;
+    }
 
-	public double getFrameRate() {
-		return frameRate;
-	}
+    public void setSampleRate(final int sampleRate) {
+        this.sampleRate = sampleRate;
+    }
 
-	public void setFrameRate(final double frameRate) {
-		this.frameRate = frameRate;
-	}
+    public double getFrameRate() {
+        return frameRate;
+    }
 
-	public long getTimestamp() {
-		return timestamp;
-	}
+    public void setFrameRate(final double frameRate) {
+        this.frameRate = frameRate;
+    }
 
-	public void setTimestamp(final long timestamp) {
-		this.timestamp = timestamp;
-	}
+    public long getTimestamp() {
+        return timestamp;
+    }
 
-	public int getImageHeight() {
-		return ImageHeight;
-	}
+    public void setTimestamp(final long timestamp) {
+        this.timestamp = timestamp;
+    }
 
-	public void setImageHeight(final int imageHeight) {
-		ImageHeight = imageHeight;
-	}
+    public int getImageHeight() {
+        return ImageHeight;
+    }
 
-	public int getImageWidth() {
-		return imageWidth;
-	}
+    public void setImageHeight(final int imageHeight) {
+        ImageHeight = imageHeight;
+    }
 
-	public void setImageWidth(final int imageWidth) {
-		this.imageWidth = imageWidth;
-	}
+    public int getImageWidth() {
+        return imageWidth;
+    }
+
+    public void setImageWidth(final int imageWidth) {
+        this.imageWidth = imageWidth;
+    }
 }
